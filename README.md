@@ -1,3 +1,7 @@
+# IMPORTANT: THIS REPOSITORY HAS BEEN ARCHIVED AND RL4J HAS BEEN MOVED
+RL4J has been migrated to a sub-module of the mono-repository here: https://github.com/deeplearning4j/deeplearning4j
+All future development will continue at that repository, which should be used for all issues and pull requests.
+
 # RL4J
 
 RL4J is a reinforcement learning framework integrated with deeplearning4j and released under an Apache 2.0 open-source license. By contributing code to this repository, you agree to make your contribution available under an Apache 2.0 license.
