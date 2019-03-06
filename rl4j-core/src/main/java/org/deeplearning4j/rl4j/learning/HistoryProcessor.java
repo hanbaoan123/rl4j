@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright (c) 2015-2018 Skymind, Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License, Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ******************************************************************************/
+
 package org.deeplearning4j.rl4j.learning;
 
 import lombok.Getter;
@@ -75,8 +91,8 @@ public class HistoryProcessor implements IHistoryProcessor {
 
     public void record(INDArray raw) {
         if (fmpegFrameRecorder != null) {
-            int[] shape = raw.shape();
-            Mat ocvmat = new Mat(shape[0], shape[1], CV_32FC(3), raw.data().pointer());
+            long[] shape = raw.shape();
+            Mat ocvmat = new Mat((int)shape[0], (int)shape[1], CV_32FC(3), raw.data().pointer());
             Mat cvmat = new Mat(shape[0], shape[1], CV_8UC(3));
             ocvmat.convertTo(cvmat, CV_8UC(3), 255.0, 0.0);
             Frame frame = openCVFrameConverter.convert(cvmat);
@@ -98,8 +114,8 @@ public class HistoryProcessor implements IHistoryProcessor {
 
 
     private INDArray transform(INDArray raw) {
-        int[] shape = raw.shape();
-        Mat ocvmat = new Mat(shape[0], shape[1], CV_32FC(3), raw.data().pointer());
+        long[] shape = raw.shape();
+        Mat ocvmat = new Mat((int)shape[0], (int)shape[1], CV_32FC(3), raw.data().pointer());
         Mat cvmat = new Mat(shape[0], shape[1], CV_8UC(3));
         ocvmat.convertTo(cvmat, CV_8UC(3), 255.0, 0.0);
         cvtColor(cvmat, cvmat, COLOR_RGB2GRAY);

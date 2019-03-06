@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * Copyright (c) 2015-2018 Skymind, Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License, Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ******************************************************************************/
+
 package org.deeplearning4j.rl4j.network.ac;
 
 import lombok.EqualsAndHashCode;
@@ -8,7 +24,8 @@ import org.nd4j.linalg.lossfunctions.LossUtil;
 import org.nd4j.linalg.lossfunctions.impl.LossMCXENT;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.primitives.Pair;
-import org.nd4j.shade.jackson.annotation.JsonInclude;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  *
@@ -59,7 +76,7 @@ public class ActorCriticLoss implements ILossFunction {
         INDArray logOutput = Transforms.log(output, true);
         INDArray entropyDev = logOutput.addi(1);
         INDArray dLda = output.rdivi(labels).subi(entropyDev.muli(BETA)).negi();
-        INDArray grad = activationFn.backprop(preOutput, dLda).getFirst();
+        INDArray grad = (INDArray) activationFn.backprop(preOutput, dLda).getFirst();
 
         if (mask != null) {
             LossUtil.applyMask(grad, mask);

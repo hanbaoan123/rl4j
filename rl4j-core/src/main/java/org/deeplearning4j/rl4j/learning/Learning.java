@@ -1,7 +1,24 @@
+/*******************************************************************************
+ * Copyright (c) 2015-2018 Skymind, Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License, Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ******************************************************************************/
+
 package org.deeplearning4j.rl4j.learning;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.deeplearning4j.gym.StepReply;
@@ -29,13 +46,11 @@ public abstract class Learning<O extends Encodable, A, AS extends ActionSpace<A>
                 implements ILearning<O, A, AS>, NeuralNetFetchable<NN> {
     @Getter
     final private Random random;
-
-    @Getter
+    @Getter @Setter
     private int stepCounter = 0;
-    @Getter
+    @Getter @Setter
     private int epochCounter = 0;
-
-    @Getter
+    @Getter @Setter
     private IHistoryProcessor historyProcessor = null;
 
     public Learning(LConfiguration conf) {
@@ -50,7 +65,7 @@ public abstract class Learning<O extends Encodable, A, AS extends ActionSpace<A>
         INDArray arr = Nd4j.create(obs.toArray());
         int[] shape = mdp.getObservationSpace().getShape();
         if (shape.length == 1)
-            return arr;
+            return arr.reshape(new long[] {1, arr.length()});
         else
             return arr.reshape(shape);
     }
@@ -95,9 +110,7 @@ public abstract class Learning<O extends Encodable, A, AS extends ActionSpace<A>
     public static int[] makeShape(int size, int[] shape) {
         int[] nshape = new int[shape.length + 1];
         nshape[0] = size;
-        for (int i = 0; i < shape.length; i++) {
-            nshape[i + 1] = shape[i];
-        }
+        System.arraycopy(shape, 0, nshape, 1, shape.length);
         return nshape;
     }
 
@@ -124,8 +137,12 @@ public abstract class Learning<O extends Encodable, A, AS extends ActionSpace<A>
         return epochCounter++;
     }
 
-    protected void setHistoryProcessor(HistoryProcessor.Configuration conf) {
+    public void setHistoryProcessor(HistoryProcessor.Configuration conf) {
         historyProcessor = new HistoryProcessor(conf);
+    }
+
+    public void setHistoryProcessor(IHistoryProcessor historyProcessor) {
+        this.historyProcessor = historyProcessor;
     }
 
     public INDArray getInput(O obs) {

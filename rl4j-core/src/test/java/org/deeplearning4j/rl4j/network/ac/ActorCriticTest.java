@@ -1,20 +1,19 @@
-/*-
+/*******************************************************************************
+ * Copyright (c) 2015-2018 Skymind, Inc.
  *
- *  * Copyright 2017 Skymind,Inc.
- *  *
- *  *    Licensed under the Apache License, Version 2.0 (the "License");
- *  *    you may not use this file except in compliance with the License.
- *  *    You may obtain a copy of the License at
- *  *
- *  *        http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  *    Unless required by applicable law or agreed to in writing, software
- *  *    distributed under the License is distributed on an "AS IS" BASIS,
- *  *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  *    See the License for the specific language governing permissions and
- *  *    limitations under the License.
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License, Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0.
  *
- */
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ ******************************************************************************/
+
 package org.deeplearning4j.rl4j.network.ac;
 
 import org.junit.Test;
@@ -84,15 +83,15 @@ public class ActorCriticTest {
 
         for (double i = eps; i < n; i++) {
             for (double j = eps; j < n; j++) {
-                INDArray labels = Nd4j.create(new double[] {i / n, 1 - i / n});
-                INDArray output = Nd4j.create(new double[] {j / n, 1 - j / n});
+                INDArray labels = Nd4j.create(new double[] {i / n, 1 - i / n}, new long[]{1,2});
+                INDArray output = Nd4j.create(new double[] {j / n, 1 - j / n}, new long[]{1,2});
                 INDArray gradient = loss.computeGradient(labels, output, activation, null);
 
-                output = Nd4j.create(new double[] {j / n, 1 - j / n});
+                output = Nd4j.create(new double[] {j / n, 1 - j / n}, new long[]{1,2});
                 double score = loss.computeScore(labels, output, activation, null, false);
-                INDArray output1 = Nd4j.create(new double[] {j / n + eps, 1 - j / n});
+                INDArray output1 = Nd4j.create(new double[] {j / n + eps, 1 - j / n}, new long[]{1,2});
                 double score1 = loss.computeScore(labels, output1, activation, null, false);
-                INDArray output2 = Nd4j.create(new double[] {j / n, 1 - j / n + eps});
+                INDArray output2 = Nd4j.create(new double[] {j / n, 1 - j / n + eps}, new long[]{1,2});
                 double score2 = loss.computeScore(labels, output2, activation, null, false);
 
                 double gradient1 = (score1 - score) / eps;
