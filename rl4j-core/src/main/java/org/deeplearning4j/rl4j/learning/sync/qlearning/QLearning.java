@@ -37,152 +37,168 @@ import java.util.List;
 
 /**
  * @author rubenfiszel (ruben.fiszel@epfl.ch) 7/19/16.
- * <p>
- * Mother class for QLearning in the Discrete domain and
- * hopefully one day for the  Continuous domain.
+ *         <p>
+ *         Mother class for QLearning in the Discrete domain and hopefully one
+ *         day for the Continuous domain.
  */
 @Slf4j
 public abstract class QLearning<O extends Encodable, A, AS extends ActionSpace<A>>
-                extends SyncLearning<O, A, AS, IDQN> {
+		extends SyncLearning<O, A, AS, IDQN> {
 
-    @Getter
-    final private IExpReplay<A> expReplay;
+	@Getter
+	final private IExpReplay<A> expReplay;
 
-    public QLearning(QLConfiguration conf) {
-        super(conf);
-        expReplay = new ExpReplay<>(conf.getExpRepMaxSize(), conf.getBatchSize(), conf.getSeed());
-    }
+	public QLearning(QLConfiguration conf) {
+		super(conf);
+		expReplay = new ExpReplay<>(conf.getExpRepMaxSize(), conf.getBatchSize(), conf.getSeed());
+	}
 
-    protected abstract EpsGreedy<O, A, AS> getEgPolicy();
+	protected abstract EpsGreedy<O, A, AS> getEgPolicy();
 
-    public abstract MDP<O, A, AS> getMdp();
+	public abstract MDP<O, A, AS> getMdp();
 
-    protected abstract IDQN getCurrentDQN();
+	protected abstract IDQN getCurrentDQN();
 
-    protected abstract IDQN getTargetDQN();
+	protected abstract IDQN getTargetDQN();
 
-    protected abstract void setTargetDQN(IDQN dqn);
+	protected abstract void setTargetDQN(IDQN dqn);
 
-    protected INDArray dqnOutput(INDArray input) {
-        return getCurrentDQN().output(input);
-    }
+	protected INDArray dqnOutput(INDArray input) {
+		return getCurrentDQN().output(input);
+	}
 
-    protected INDArray targetDqnOutput(INDArray input) {
-        return getTargetDQN().output(input);
-    }
+	protected INDArray targetDqnOutput(INDArray input) {
+		return getTargetDQN().output(input);
+	}
 
-    protected void updateTargetNetwork() {
-        log.info("Update target network");
-        setTargetDQN(getCurrentDQN().clone());
-    }
+	protected void updateTargetNetwork() {
+		log.info("Update target network");
+		setTargetDQN(getCurrentDQN().clone());
+	}
 
+	public IDQN getNeuralNet() {
+		return getCurrentDQN();
+	}
 
-    public IDQN getNeuralNet() {
-        return getCurrentDQN();
-    }
+	public abstract QLConfiguration getConfiguration();
 
-    public abstract QLConfiguration getConfiguration();
+	protected abstract void preEpoch();
 
-    protected abstract void preEpoch();
+	protected abstract void postEpoch();
 
-    protected abstract void postEpoch();
+	protected abstract QLStepReturn<O> trainStep(O obs);
 
-    protected abstract QLStepReturn<O> trainStep(O obs);
+	protected StatEntry trainEpoch() {
+		InitMdp<O> initMdp = initMdp();
+		O obs = initMdp.getLastObs();
 
-    protected StatEntry trainEpoch() {
-        InitMdp<O> initMdp = initMdp();
-        O obs = initMdp.getLastObs();
+		double reward = initMdp.getReward();
+		int step = initMdp.getSteps();
 
-        double reward = initMdp.getReward();
-        int step = initMdp.getSteps();
+		Double startQ = Double.NaN;
+		double meanQ = 0;
+		int numQ = 0;
+		List<Double> scores = new ArrayList<>();
+		while (step < getConfiguration().getMaxEpochStep() && !getMdp().isDone()) {
 
-        Double startQ = Double.NaN;
-        double meanQ = 0;
-        int numQ = 0;
-        List<Double> scores = new ArrayList<>();
-        while (step < getConfiguration().getMaxEpochStep() && !getMdp().isDone()) {
+			if (getStepCounter() % getConfiguration().getTargetDqnUpdateFreq() == 0) {
+				updateTargetNetwork();
+			}
 
-            if (getStepCounter() % getConfiguration().getTargetDqnUpdateFreq() == 0) {
-                updateTargetNetwork();
-            }
+			QLStepReturn<O> stepR = trainStep(obs);
 
-            QLStepReturn<O> stepR = trainStep(obs);
+			if (!stepR.getMaxQ().isNaN()) {
+				if (startQ.isNaN())
+					startQ = stepR.getMaxQ();
+				numQ++;
+				meanQ += stepR.getMaxQ();
+			}
 
-            if (!stepR.getMaxQ().isNaN()) {
-                if (startQ.isNaN())
-                    startQ = stepR.getMaxQ();
-                numQ++;
-                meanQ += stepR.getMaxQ();
-            }
+			if (stepR.getScore() != 0)
+				scores.add(stepR.getScore());
 
-            if (stepR.getScore() != 0)
-                scores.add(stepR.getScore());
+			reward += stepR.getStepReply().getReward();
+			obs = stepR.getStepReply().getObservation();
+			incrementStep();
+			step++;
+		}
 
-            reward += stepR.getStepReply().getReward();
-            obs = stepR.getStepReply().getObservation();
-            incrementStep();
-            step++;
-        }
+		meanQ /= (numQ + 0.001); // avoid div zero
 
-        meanQ /= (numQ + 0.001); //avoid div zero
+		StatEntry statEntry = new QLStatEntry(getStepCounter(), getEpochCounter(), reward, step, scores,
+				getEgPolicy().getEpsilon(), startQ, meanQ);
 
+		return statEntry;
 
-        StatEntry statEntry = new QLStatEntry(getStepCounter(), getEpochCounter(), reward, step, scores,
-                        getEgPolicy().getEpsilon(), startQ, meanQ);
+	}
 
-        return statEntry;
+	@AllArgsConstructor
+	@Builder
+	@Value
+	public static class QLStatEntry implements StatEntry {
+		int stepCounter;
+		int epochCounter;
+		double reward;
+		int episodeLength;
+		List<Double> scores;
+		float epsilon;
+		double startQ;
+		double meanQ;
+	}
 
-    }
+	@Setter
+	@Getter
+	public static class EpochState {
+		public int epochCounter = 0;
+		/**
+		 * 状态变迁序列
+		 */
+		public List<double[]> states = new ArrayList<>();
 
-    @AllArgsConstructor
-    @Builder
-    @Value
-    public static class QLStatEntry implements StatEntry {
-        int stepCounter;
-        int epochCounter;
-        double reward;
-        int episodeLength;
-        List<Double> scores;
-        float epsilon;
-        double startQ;
-        double meanQ;
-    }
+		public EpochState() {
+		}
 
-    @AllArgsConstructor
-    @Builder
-    @Value
-    public static class QLStepReturn<O> {
-        Double maxQ;
-        double score;
-        StepReply<O> stepReply;
+		public EpochState(int epochCounter, List<double[]> states) {
+			this.epochCounter = epochCounter;
+			this.states = states;
+		}
+	}
 
-    }
+	@AllArgsConstructor
+	@Builder
+	@Value
+	public static class QLStepReturn<O> {
+		Double maxQ;
+		double score;
+		StepReply<O> stepReply;
 
-    @Data
-    @AllArgsConstructor
-    @Builder
-    @EqualsAndHashCode(callSuper = false)
-    @JsonDeserialize(builder = QLConfiguration.QLConfigurationBuilder.class)
-    public static class QLConfiguration implements LConfiguration {
+	}
 
-        int seed;
-        int maxEpochStep;
-        int maxStep;
-        int expRepMaxSize;
-        int batchSize;
-        int targetDqnUpdateFreq;
-        int updateStart;
-        double rewardFactor;
-        double gamma;
-        double errorClamp;
-        float minEpsilon;
-        int epsilonNbStep;
-        boolean doubleDQN;
+	@Data
+	@AllArgsConstructor
+	@Builder
+	@EqualsAndHashCode(callSuper = false)
+	@JsonDeserialize(builder = QLConfiguration.QLConfigurationBuilder.class)
+	public static class QLConfiguration implements LConfiguration {
 
-        @JsonPOJOBuilder(withPrefix = "")
-        public static final class QLConfigurationBuilder {
-        }
-    }
+		int seed;
+		int maxEpochStep;
+		int maxEpoch;
+		int maxStep;
+		int expRepMaxSize;
+		int batchSize;
+		int targetDqnUpdateFreq;
+		int updateStart;
+		double rewardFactor;
+		double gamma;
+		double errorClamp;
+		float minEpsilon;
+		int epsilonNbStep;
+		boolean doubleDQN;
 
+		@JsonPOJOBuilder(withPrefix = "")
+		public static final class QLConfigurationBuilder {
+		}
+	}
 
 }
