@@ -173,7 +173,7 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 			for (int i = 0; i < actionsAtState.size(); i++) {
 				for (int col = 0; col < qs_.columns(); col++) {
 					if (!actionsAtState.contains(col)) {
-						qs_.getRow(0).putScalar(col, -1 * Double.MAX_VALUE);
+						qs_.putScalar(0, col, -1 * Double.MAX_VALUE);
 					}
 				}
 			}
@@ -298,9 +298,9 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 			for (Path path : nextPoint.getSuccPathSet()) {
 				pathsIndex.add((Integer) pathEnv.getPathsMap().get(path));
 			}
-			for (int col = 0; col < dqnOutputNext_.getRow(i).columns(); col++) {
+			for (int col = 0; col < dqnOutputNext_.columns(); col++) {
 				if (!pathsIndex.contains(col)) {
-					dqnOutputNext_.getRow(i).putScalar(col, -1 * Double.MAX_VALUE);
+					dqnOutputNext_.putScalar(i, col, -1 * Double.MAX_VALUE);
 				}
 			}
 		}

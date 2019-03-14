@@ -59,6 +59,7 @@ public abstract class QLearningDiscrete<O extends Encodable> extends QLearning<O
     @Getter
     final private IDQN currentDQN;
     @Getter
+    @Setter
     private DQNPolicy<O> policy;
     @Getter
     private EpsGreedy<O, Integer, DiscreteSpace> egPolicy;

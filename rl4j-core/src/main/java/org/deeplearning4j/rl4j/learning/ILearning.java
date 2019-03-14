@@ -24,30 +24,31 @@ import org.deeplearning4j.rl4j.space.Encodable;
 /**
  * @author rubenfiszel (ruben.fiszel@epfl.ch) 7/19/16.
  *
- * A common interface that any training method should implement
+ *         A common interface that any training method should implement
  */
 public interface ILearning<O extends Encodable, A, AS extends ActionSpace<A>> extends StepCountable {
 
-    Policy<O, A> getPolicy();
+	Policy<O, A> getPolicy();
 
-    void train();
+	void train();
 
-    int getStepCounter();
+	int getStepCounter();
 
-    LConfiguration getConfiguration();
+	LConfiguration getConfiguration();
 
-    MDP<O, A, AS> getMdp();
+	MDP<O, A, AS> getMdp();
 
+	interface LConfiguration {
 
-    interface LConfiguration {
+		int getSeed();
 
-        int getSeed();
+		int getMaxEpochStep();
 
-        int getMaxEpochStep();
+		int getMaxEpoch();
 
-        int getMaxStep();
+		int getMaxStep();
 
-        double getGamma();
-    }
+		double getGamma();
+	}
 
 }

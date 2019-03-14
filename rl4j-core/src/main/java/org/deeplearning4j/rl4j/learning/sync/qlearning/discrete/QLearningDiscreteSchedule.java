@@ -2,6 +2,10 @@ package org.deeplearning4j.rl4j.learning.sync.qlearning.discrete;
 
 import lombok.Getter;
 import lombok.Setter;
+import model.Path;
+import model.PathEnv;
+import model.Point;
+
 import org.nd4j.linalg.primitives.Pair;
 
 import com.mes.schedule.deepQL.env.ScheduleEnv;
@@ -82,6 +86,8 @@ public abstract class QLearningDiscreteSchedule<O extends Encodable> extends QLe
 		// 使用调度贪婪策略
 		egSchedulePolicy = new EpsGreedySchedule(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(),
 				conf.getMinEpsilon(), this);
+		egPolicy = new EpsGreedy(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(), conf.getMinEpsilon(),
+				this);
 		mdp.getActionSpace().setSeed(conf.getSeed());
 	}
 
@@ -153,9 +159,9 @@ public abstract class QLearningDiscreteSchedule<O extends Encodable> extends QLe
 				hstack = hstack.reshape(Learning.makeShape(1, ArrayUtil.toInts(hstack.shape())));
 
 			INDArray qs = getCurrentDQN().output(hstack);
-			int maxAction = Learning.getMaxAction(qs);
-
-			maxQ = qs.getDouble(maxAction);
+			// 这个地方要考虑可选行为集合，将非可选行为位置上的值置为最小值
+			INDArray qs_ = qs.dup();
+			List<Integer> actionsAtState = new ArrayList<Integer>();
 			if (DeepQLParameters.actionSelection == 0) {
 				action = getEgSchedulePolicy().nextAction(hstack);
 			} else {
@@ -163,7 +169,6 @@ public abstract class QLearningDiscreteSchedule<O extends Encodable> extends QLe
 				if (getMdp() instanceof ScheduleEnv) {
 					ScheduleEnv scheduleEnv = (ScheduleEnv) getMdp();
 					ScheduleScheme scheme = scheduleEnv.getScheme();
-					List<Integer> actionsAtState = new ArrayList<Integer>();
 					int partIndex = 0;
 					for (SPartTask partTask : scheme.getSchedulePartTasks()) {
 						for (int i = partTask.getOperationTaskList().size() - 1; i >= 0; i--) {
@@ -178,6 +183,15 @@ public abstract class QLearningDiscreteSchedule<O extends Encodable> extends QLe
 					action = getEgSchedulePolicy().nextAction(hstack, actionsAtState);
 				}
 			}
+			for (int i = 0; i < actionsAtState.size(); i++) {
+				for (int col = 0; col < qs_.columns(); col++) {
+					if (!actionsAtState.contains(col)) {
+						qs_.putScalar(col, -1 * Double.MAX_VALUE);
+					}
+				}
+			}
+			int maxAction = Learning.getMaxAction(qs_);
+			maxQ = qs_.getDouble(maxAction);
 		}
 
 		lastAction = action;
@@ -268,13 +282,39 @@ public abstract class QLearningDiscreteSchedule<O extends Encodable> extends QLe
 		INDArray dqnOutputAr = dqnOutput(obs);
 
 		INDArray dqnOutputNext = dqnOutput(nextObs);
+
 		INDArray targetDqnOutputNext = null;
 
 		INDArray tempQ = null;
 		INDArray getMaxAction = null;
+		// // 此处实际上应该考虑选择零件时的可选零件，有点问题在于，无法知道历史时刻的任务安排情况，也就不知道哪些零件还未安排完
+		INDArray dqnOutputNext_ = dqnOutputNext.dup();
+		if (DeepQLParameters.actionSelection == 1) {
+			ScheduleEnv scheduleEnv = (ScheduleEnv) this.mdp;
+			for (int i = 0; i < size; i++) {
+				ScheduleScheme scheme = scheduleEnv.getScheme();
+				int partIndex = 0;
+				List<Integer> partsIndex = new ArrayList<Integer>();
+				for (SPartTask partTask : scheme.getSchedulePartTasks()) {
+					for (int j = partTask.getOperationTaskList().size() - 1; j >= 0; j--) {
+						SOperationTask operationTask = partTask.getOperationTaskList().get(j);
+						if (operationTask.getAssignState() == SOperationTask.ASSNSTATE_WAITING) {
+							partsIndex.add(partIndex);
+							break;
+						}
+					}
+					partIndex++;
+				}
+				for (int col = 0; col < dqnOutputNext_.columns(); col++) {
+					if (!partsIndex.contains(col)) {
+						dqnOutputNext_.putScalar(i, col, -1 * Double.MAX_VALUE);
+					}
+				}
+			}
+		}
 		if (getConfiguration().isDoubleDQN()) {
 			targetDqnOutputNext = targetDqnOutput(nextObs);
-			getMaxAction = Nd4j.argMax(dqnOutputNext, 1);
+			getMaxAction = Nd4j.argMax(dqnOutputNext_, 1);
 		} else {
 			tempQ = Nd4j.max(dqnOutputNext, 1);
 		}

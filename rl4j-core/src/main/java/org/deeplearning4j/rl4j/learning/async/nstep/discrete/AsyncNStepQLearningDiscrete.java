@@ -33,60 +33,58 @@ import org.deeplearning4j.rl4j.util.DataManager;
  * @author rubenfiszel (ruben.fiszel@epfl.ch) on 8/5/16.
  */
 public abstract class AsyncNStepQLearningDiscrete<O extends Encodable>
-                extends AsyncLearning<O, Integer, DiscreteSpace, IDQN> {
+		extends AsyncLearning<O, Integer, DiscreteSpace, IDQN> {
 
-    @Getter
-    final public AsyncNStepQLConfiguration configuration;
-    @Getter
-    final private MDP<O, Integer, DiscreteSpace> mdp;
-    @Getter
-    final private DataManager dataManager;
-    @Getter
-    final private AsyncGlobal<IDQN> asyncGlobal;
+	@Getter
+	final public AsyncNStepQLConfiguration configuration;
+	@Getter
+	final private MDP<O, Integer, DiscreteSpace> mdp;
+	@Getter
+	final private DataManager dataManager;
+	@Getter
+	final private AsyncGlobal<IDQN> asyncGlobal;
 
+	public AsyncNStepQLearningDiscrete(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn, AsyncNStepQLConfiguration conf,
+			DataManager dataManager) {
+		super(conf);
+		this.mdp = mdp;
+		this.dataManager = dataManager;
+		this.configuration = conf;
+		this.asyncGlobal = new AsyncGlobal<>(dqn, conf);
+		mdp.getActionSpace().setSeed(conf.getSeed());
+	}
 
-    public AsyncNStepQLearningDiscrete(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn, AsyncNStepQLConfiguration conf,
-                    DataManager dataManager) {
-        super(conf);
-        this.mdp = mdp;
-        this.dataManager = dataManager;
-        this.configuration = conf;
-        this.asyncGlobal = new AsyncGlobal<>(dqn, conf);
-        mdp.getActionSpace().setSeed(conf.getSeed());
-    }
+	public AsyncThread newThread(int i) {
+		return new AsyncNStepQLearningThreadDiscrete(mdp.newInstance(), asyncGlobal, configuration, i, dataManager);
+	}
 
+	public IDQN getNeuralNet() {
+		return asyncGlobal.getCurrent();
+	}
 
-    public AsyncThread newThread(int i) {
-        return new AsyncNStepQLearningThreadDiscrete(mdp.newInstance(), asyncGlobal, configuration, i, dataManager);
-    }
+	public Policy<O, Integer> getPolicy() {
+		return new DQNPolicy<O>(getNeuralNet());
+	}
 
-    public IDQN getNeuralNet() {
-        return asyncGlobal.getCurrent();
-    }
+	@Data
+	@AllArgsConstructor
+	@Builder
+	@EqualsAndHashCode(callSuper = false)
+	public static class AsyncNStepQLConfiguration implements AsyncConfiguration {
 
-    public Policy<O, Integer> getPolicy() {
-        return new DQNPolicy<O>(getNeuralNet());
-    }
+		int seed;
+		int maxEpochStep;
+		int maxEpoch;
+		int maxStep;
+		int numThread;
+		int nstep;
+		int targetDqnUpdateFreq;
+		int updateStart;
+		double rewardFactor;
+		double gamma;
+		double errorClamp;
+		float minEpsilon;
+		int epsilonNbStep;
 
-
-    @Data
-    @AllArgsConstructor
-    @Builder
-    @EqualsAndHashCode(callSuper = false)
-    public static class AsyncNStepQLConfiguration implements AsyncConfiguration {
-
-        int seed;
-        int maxEpochStep;
-        int maxStep;
-        int numThread;
-        int nstep;
-        int targetDqnUpdateFreq;
-        int updateStart;
-        double rewardFactor;
-        double gamma;
-        double errorClamp;
-        float minEpsilon;
-        int epsilonNbStep;
-
-    }
+	}
 }
