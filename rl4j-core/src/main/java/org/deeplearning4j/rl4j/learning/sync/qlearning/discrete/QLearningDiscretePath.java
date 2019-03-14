@@ -12,8 +12,10 @@ import com.mes.schedule.deepQL.env.ScheduleEnv;
 import com.mes.schedule.domain.SOperationTask;
 import com.mes.schedule.domain.SPartTask;
 import com.mes.schedule.domain.ScheduleScheme;
+import com.mes.schedule.ec.app.regression.func.Log;
 import com.mes.schedule.rl.deepQL.DeepQLParameters;
 
+import org.bytedeco.javacpp.RealSense.log_callback;
 import org.deeplearning4j.gym.StepReply;
 import org.deeplearning4j.rl4j.learning.Learning;
 import org.deeplearning4j.rl4j.learning.sync.Transition;
@@ -21,6 +23,7 @@ import org.deeplearning4j.rl4j.learning.sync.qlearning.QLearning;
 import org.deeplearning4j.rl4j.mdp.MDP;
 import org.deeplearning4j.rl4j.network.dqn.IDQN;
 import org.deeplearning4j.rl4j.policy.DQNPolicy;
+import org.deeplearning4j.rl4j.policy.DQNPolicyPath;
 import org.deeplearning4j.rl4j.policy.EpsGreedy;
 import org.deeplearning4j.rl4j.policy.EpsGreedyPath;
 import org.deeplearning4j.rl4j.policy.EpsGreedySchedule;
@@ -58,7 +61,7 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 	final private IDQN currentDQN;
 	@Getter
 	@Setter
-	private DQNPolicy<O> policy;
+	private DQNPolicyPath<O> policy;
 	@Getter
 	@Setter
 	private EpsGreedy<O, Integer, DiscreteSpace> egPolicy;
@@ -84,7 +87,7 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 		this.dataManager = dataManager;
 		currentDQN = dqn;
 		targetDQN = dqn.clone();
-		policy = new DQNPolicy(getCurrentDQN());
+		policy = new DQNPolicyPath(getCurrentDQN());
 		egPathPolicy = new EpsGreedyPath(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(),
 				conf.getMinEpsilon(), this);
 		egPolicy = new EpsGreedy(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(), conf.getMinEpsilon(),
@@ -165,7 +168,13 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 			for (Path path : currentPoint.getSuccPathSet()) {
 				actionsAtState.add((Integer) pathEnv.getPathsMap().get(path));
 			}
+			if (hstack.getDouble(0, 0) == 0.4 && hstack.getDouble(0, 1) == 0) {
+				System.out.println("111");
+			}
 			action = getEgPathPolicy().nextAction(hstack, actionsAtState);
+			if (action == null) {
+				System.out.println("111");
+			}
 
 			INDArray qs = getCurrentDQN().output(hstack);
 			// 这个地方要考虑可选行为集合，将非可选行为位置上的值置为最小值
