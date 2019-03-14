@@ -168,14 +168,6 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 			for (Path path : currentPoint.getSuccPathSet()) {
 				actionsAtState.add((Integer) pathEnv.getPathsMap().get(path));
 			}
-			if (hstack.getDouble(0, 0) == 0.4 && hstack.getDouble(0, 1) == 0) {
-				System.out.println("111");
-			}
-			action = getEgPathPolicy().nextAction(hstack, actionsAtState);
-			if (action == null) {
-				System.out.println("111");
-			}
-
 			INDArray qs = getCurrentDQN().output(hstack);
 			// 这个地方要考虑可选行为集合，将非可选行为位置上的值置为最小值
 			INDArray qs_ = qs.dup();
