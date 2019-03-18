@@ -178,6 +178,7 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 					}
 				}
 			}
+			action = getEgPathPolicy().nextAction(hstack, actionsAtState);
 			int maxAction = Learning.getMaxAction(qs_);
 
 			maxQ = qs_.getDouble(maxAction);
