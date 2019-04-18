@@ -59,8 +59,9 @@ public abstract class SyncLearning<O extends Encodable, A, AS extends ActionSpac
 					getDataManager().save(this);
 					lastSave = getStepCounter();
 				}
-
-				getDataManager().appendStat(statEntry);
+				if ((getEpochCounter() - 1) % 100 == 0 || getEpochCounter() == getConfiguration().getMaxEpoch()) {
+					getDataManager().appendStat(statEntry);
+				}
 				getDataManager().writeInfo(this);
 
 				log.info("Epoch: " + getEpochCounter() + ", reward: " + statEntry.getReward());
