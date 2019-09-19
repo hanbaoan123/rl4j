@@ -18,6 +18,7 @@ package org.deeplearning4j.rl4j.learning.sync;
 
 import lombok.extern.slf4j.Slf4j;
 import org.deeplearning4j.rl4j.learning.Learning;
+import org.deeplearning4j.rl4j.learning.sync.qlearning.QLearning.QLStepReturn;
 import org.deeplearning4j.rl4j.network.NeuralNet;
 import org.deeplearning4j.rl4j.space.ActionSpace;
 import org.deeplearning4j.rl4j.space.Encodable;
@@ -49,6 +50,7 @@ public abstract class SyncLearning<O extends Encodable, A, AS extends ActionSpac
 			getDataManager().writeInfo(this);
 
 			while (getEpochCounter() < getConfiguration().getMaxEpoch()) {
+				long start = System.currentTimeMillis();
 				preEpoch();
 				DataManager.StatEntry statEntry = trainEpoch();
 				postEpoch();
@@ -59,11 +61,11 @@ public abstract class SyncLearning<O extends Encodable, A, AS extends ActionSpac
 					getDataManager().save(this);
 					lastSave = getStepCounter();
 				}
-				if ((getEpochCounter() - 1) % 100 == 0 || getEpochCounter() == getConfiguration().getMaxEpoch()) {
+				if ((getEpochCounter() - 1) % 1 == 0 || getEpochCounter() == getConfiguration().getMaxEpoch()) {
 					getDataManager().appendStat(statEntry);
 				}
 				getDataManager().writeInfo(this);
-
+				System.out.println("***************一代时间：" + (System.currentTimeMillis() - start) / 1000.0);
 				log.info("Epoch: " + getEpochCounter() + ", reward: " + statEntry.getReward());
 			}
 		} catch (Exception e) {

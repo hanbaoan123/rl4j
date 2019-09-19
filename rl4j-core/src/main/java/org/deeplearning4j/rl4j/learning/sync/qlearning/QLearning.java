@@ -100,13 +100,10 @@ public abstract class QLearning<O extends Encodable, A, AS extends ActionSpace<A
 		int numQ = 0;
 		List<Double> scores = new ArrayList<>();
 		while (step < getConfiguration().getMaxEpochStep() && !getMdp().isDone()) {
-
 			if (getStepCounter() % getConfiguration().getTargetDqnUpdateFreq() == 0) {
 				updateTargetNetwork();
 			}
-
 			QLStepReturn<O> stepR = trainStep(obs);
-
 			if (!stepR.getMaxQ().isNaN()) {
 				if (startQ.isNaN())
 					startQ = stepR.getMaxQ();
@@ -127,7 +124,6 @@ public abstract class QLearning<O extends Encodable, A, AS extends ActionSpace<A
 
 		StatEntry statEntry = new QLStatEntry(getStepCounter(), getEpochCounter(), reward, step, scores,
 				getEgPolicy().getEpsilon(), startQ, meanQ);
-
 		return statEntry;
 
 	}
