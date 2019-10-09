@@ -24,7 +24,8 @@ import org.deeplearning4j.rl4j.network.dqn.DQNFactoryStdConv;
 import org.deeplearning4j.rl4j.network.dqn.IDQN;
 import org.deeplearning4j.rl4j.space.DiscreteSpace;
 import org.deeplearning4j.rl4j.space.Encodable;
-import org.deeplearning4j.rl4j.util.DataManager;
+import org.deeplearning4j.rl4j.util.DataManagerTrainingListener;
+import org.deeplearning4j.rl4j.util.IDataManager;
 
 /**
  * @author rubenfiszel (ruben.fiszel@epfl.ch) on 8/7/16.
@@ -35,26 +36,42 @@ public class AsyncNStepQLearningDiscreteConv<O extends Encodable> extends AsyncN
 
     final private HistoryProcessor.Configuration hpconf;
 
+    @Deprecated
     public AsyncNStepQLearningDiscreteConv(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn,
-                    HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf, DataManager dataManager) {
-        super(mdp, dqn, conf, dataManager);
+                    HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf, IDataManager dataManager) {
+        this(mdp, dqn, hpconf, conf);
+        addListener(new DataManagerTrainingListener(dataManager));
+    }
+    public AsyncNStepQLearningDiscreteConv(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn,
+                                           HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf) {
+        super(mdp, dqn, conf);
         this.hpconf = hpconf;
         setHistoryProcessor(hpconf);
     }
 
+    @Deprecated
     public AsyncNStepQLearningDiscreteConv(MDP<O, Integer, DiscreteSpace> mdp, DQNFactory factory,
-                    HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf, DataManager dataManager) {
+                    HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf, IDataManager dataManager) {
         this(mdp, factory.buildDQN(hpconf.getShape(), mdp.getActionSpace().getSize()), hpconf, conf, dataManager);
     }
+    public AsyncNStepQLearningDiscreteConv(MDP<O, Integer, DiscreteSpace> mdp, DQNFactory factory,
+                                           HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf) {
+        this(mdp, factory.buildDQN(hpconf.getShape(), mdp.getActionSpace().getSize()), hpconf, conf);
+    }
 
+    @Deprecated
     public AsyncNStepQLearningDiscreteConv(MDP<O, Integer, DiscreteSpace> mdp, DQNFactoryStdConv.Configuration netConf,
-                    HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf, DataManager dataManager) {
+                    HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf, IDataManager dataManager) {
         this(mdp, new DQNFactoryStdConv(netConf), hpconf, conf, dataManager);
+    }
+    public AsyncNStepQLearningDiscreteConv(MDP<O, Integer, DiscreteSpace> mdp, DQNFactoryStdConv.Configuration netConf,
+                                           HistoryProcessor.Configuration hpconf, AsyncNStepQLConfiguration conf) {
+        this(mdp, new DQNFactoryStdConv(netConf), hpconf, conf);
     }
 
     @Override
-    public AsyncThread newThread(int i) {
-        AsyncThread at = super.newThread(i);
+    public AsyncThread newThread(int i, int deviceNum) {
+        AsyncThread at = super.newThread(i, deviceNum);
         at.setHistoryProcessor(hpconf);
         return at;
     }

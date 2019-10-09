@@ -16,8 +16,6 @@
 
 package org.deeplearning4j.rl4j.policy;
 
-import java.util.List;
-
 import org.deeplearning4j.gym.StepReply;
 import org.deeplearning4j.rl4j.learning.HistoryProcessor;
 import org.deeplearning4j.rl4j.learning.IHistoryProcessor;
@@ -33,88 +31,87 @@ import org.nd4j.linalg.util.ArrayUtil;
 /**
  * @author rubenfiszel (ruben.fiszel@epfl.ch) 7/18/16.
  *
- *         Abstract class common to all policies
+ * Abstract class common to all policies
  *
- *         A Policy responsability is to choose the next action given a state
+ * A Policy responsability is to choose the next action given a state
  */
-public abstract class Policy<O extends Encodable, A> {
+public abstract class Policy<O extends Encodable, A> implements IPolicy<O, A> {
 
-	public abstract NeuralNet getNeuralNet();
+    public abstract NeuralNet getNeuralNet();
 
-	public abstract A nextAction(INDArray input);
+    public abstract A nextAction(INDArray input);
 
-	public <AS extends ActionSpace<A>> double play(MDP<O, A, AS> mdp) {
-		return play(mdp, (IHistoryProcessor) null);
-	}
+    public <AS extends ActionSpace<A>> double play(MDP<O, A, AS> mdp) {
+        return play(mdp, (IHistoryProcessor)null);
+    }
 
-	public <AS extends ActionSpace<A>> double play(MDP<O, A, AS> mdp, HistoryProcessor.Configuration conf) {
-		return play(mdp, new HistoryProcessor(conf));
-	}
+    public <AS extends ActionSpace<A>> double play(MDP<O, A, AS> mdp, HistoryProcessor.Configuration conf) {
+        return play(mdp, new HistoryProcessor(conf));
+    }
 
-	public <AS extends ActionSpace<A>> double play(MDP<O, A, AS> mdp, IHistoryProcessor hp) {
-		getNeuralNet().reset();
-		Learning.InitMdp<O> initMdp = Learning.initMdp(mdp, hp);
-		O obs = initMdp.getLastObs();
+    @Override
+    public <AS extends ActionSpace<A>> double play(MDP<O, A, AS> mdp, IHistoryProcessor hp) {
+        getNeuralNet().reset();
+        Learning.InitMdp<O> initMdp = Learning.initMdp(mdp, hp);
+        O obs = initMdp.getLastObs();
 
-		double reward = initMdp.getReward();
+        double reward = initMdp.getReward();
 
-		A lastAction = mdp.getActionSpace().noOp();
-		A action;
-		int step = initMdp.getSteps();
-		INDArray[] history = null;
+        A lastAction = mdp.getActionSpace().noOp();
+        A action;
+        int step = initMdp.getSteps();
+        INDArray[] history = null;
 
-		while (!mdp.isDone()) {
+        while (!mdp.isDone()) {
 
-			INDArray input = Learning.getInput(mdp, obs);
-			boolean isHistoryProcessor = hp != null;
+            INDArray input = Learning.getInput(mdp, obs);
+            boolean isHistoryProcessor = hp != null;
 
-			if (isHistoryProcessor)
-				hp.record(input);
+            if (isHistoryProcessor)
+                hp.record(input);
 
-			int skipFrame = isHistoryProcessor ? hp.getConf().getSkipFrame() : 1;
+            int skipFrame = isHistoryProcessor ? hp.getConf().getSkipFrame() : 1;
 
-			if (step % skipFrame != 0) {
-				action = lastAction;
-			} else {
 
-				if (history == null) {
-					if (isHistoryProcessor) {
-						hp.add(input);
-						history = hp.getHistory();
-					} else
-						history = new INDArray[] { input };
-				}
-				INDArray hstack = Transition.concat(history);
-				if (isHistoryProcessor) {
-					hstack.muli(1.0 / hp.getScale());
-				}
-				if (getNeuralNet().isRecurrent()) {
-					// flatten everything for the RNN
-					hstack = hstack.reshape(Learning.makeShape(1, ArrayUtil.toInts(hstack.shape()), 1));
-				} else {
-					if (hstack.shape().length > 2)
-						hstack = hstack.reshape(Learning.makeShape(1, ArrayUtil.toInts(hstack.shape())));
-				}
-				action = nextAction(hstack);
-			}
-			lastAction = action;
+            if (step % skipFrame != 0) {
+                action = lastAction;
+            } else {
 
-			StepReply<O> stepReply = mdp.step(action);
-			reward += stepReply.getReward();
+                if (history == null) {
+                    if (isHistoryProcessor) {
+                        hp.add(input);
+                        history = hp.getHistory();
+                    } else
+                        history = new INDArray[] {input};
+                }
+                INDArray hstack = Transition.concat(history);
+                if (isHistoryProcessor) {
+                    hstack.muli(1.0 / hp.getScale());
+                }
+                if (getNeuralNet().isRecurrent()) {
+                    //flatten everything for the RNN
+                    hstack = hstack.reshape(Learning.makeShape(1, ArrayUtil.toInts(hstack.shape()), 1));
+                } else {
+                    if (hstack.shape().length > 2)
+                        hstack = hstack.reshape(Learning.makeShape(1, ArrayUtil.toInts(hstack.shape())));
+                }
+                action = nextAction(hstack);
+            }
+            lastAction = action;
 
-			if (isHistoryProcessor)
-				hp.add(Learning.getInput(mdp, stepReply.getObservation()));
+            StepReply<O> stepReply = mdp.step(action);
+            reward += stepReply.getReward();
 
-			history = isHistoryProcessor ? hp.getHistory()
-					: new INDArray[] { Learning.getInput(mdp, stepReply.getObservation()) };
-			step++;
-		}
+            if (isHistoryProcessor)
+                hp.add(Learning.getInput(mdp, stepReply.getObservation()));
 
-		return reward;
-	}
+            history = isHistoryProcessor ? hp.getHistory()
+                            : new INDArray[] {Learning.getInput(mdp, stepReply.getObservation())};
+            step++;
+        }
 
-	public A nextAction(INDArray input, List<Integer> actionsAtState) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+
+        return reward;
+    }
+
 }

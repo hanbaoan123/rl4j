@@ -24,8 +24,7 @@ import org.nd4j.linalg.lossfunctions.LossUtil;
 import org.nd4j.linalg.lossfunctions.impl.LossMCXENT;
 import org.nd4j.linalg.ops.transforms.Transforms;
 import org.nd4j.linalg.primitives.Pair;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
+import org.nd4j.shade.jackson.annotation.JsonInclude;
 
 /**
  *
@@ -76,7 +75,7 @@ public class ActorCriticLoss implements ILossFunction {
         INDArray logOutput = Transforms.log(output, true);
         INDArray entropyDev = logOutput.addi(1);
         INDArray dLda = output.rdivi(labels).subi(entropyDev.muli(BETA)).negi();
-        INDArray grad = (INDArray) activationFn.backprop(preOutput, dLda).getFirst();
+        INDArray grad = activationFn.backprop(preOutput, dLda).getFirst();
 
         if (mask != null) {
             LossUtil.applyMask(grad, mask);
