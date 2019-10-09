@@ -4,7 +4,7 @@
 
     <groupId>org.deeplearning4j</groupId>
     <artifactId>rl4j</artifactId>
-    <version>1.0.0-beta3</version>
+    <version>1.0.0-SNAPSHOT</version>
     <modules>
         <module>rl4j-api</module>
         <module>rl4j-core</module>
@@ -43,15 +43,15 @@
 
     <properties>
         <unirest.version>1.4.9</unirest.version>
-        <jackson.version>2.5.1</jackson.version>
+        <jackson.version>2.9.9</jackson.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <nd4j.version>1.0.0-beta3</nd4j.version>
-        <dl4j.version>1.0.0-beta3</dl4j.version>
-        <javacv.version>1.4.3</javacv.version>
-        <javacpp.version>1.4.3</javacpp.version>
-        <javacpp-presets.version>1.4.3</javacpp-presets.version>
-        <opencv.version>3.4.3</opencv.version>
-        <ffmpeg.version>4.0.2</ffmpeg.version>
+        <nd4j.version>1.0.0-SNAPSHOT</nd4j.version>
+        <dl4j.version>1.0.0-SNAPSHOT</dl4j.version>
+        <javacv.version>1.5.1</javacv.version>
+        <javacpp.version>1.5.1-1</javacpp.version>
+        <javacpp-presets.version>1.5.1</javacpp-presets.version>
+        <opencv.version>4.1.0</opencv.version>
+        <ffmpeg.version>4.1.3</ffmpeg.version>
         <ale.version>0.6.0</ale.version>
         <slf4j.version>1.7.21</slf4j.version>
         <logback.version>1.2.3</logback.version>
