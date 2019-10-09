@@ -32,6 +32,7 @@ public class QLConfigurationTest {
                 new QLearning.QLConfiguration(
                         123,    //Random seed
                         200,    //Max step By epoch
+                        3000,
                         8000, //Max step
                         150000, //Max size of experience replay
                         32,     //size of batches

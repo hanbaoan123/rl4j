@@ -142,7 +142,23 @@ public abstract class QLearning<O extends Encodable, A, AS extends ActionSpace<A
         double startQ;
         double meanQ;
     }
+    @Setter
+	@Getter
+	public static class EpochState {
+		public int epochCounter = 0;
+		/**
+		 * 状态变迁序列
+		 */
+		public List<double[]> states = new ArrayList<>();
 
+		public EpochState() {
+		}
+
+		public EpochState(int epochCounter, List<double[]> states) {
+			this.epochCounter = epochCounter;
+			this.states = states;
+		}
+	}
     @AllArgsConstructor
     @Builder
     @Value
@@ -162,6 +178,7 @@ public abstract class QLearning<O extends Encodable, A, AS extends ActionSpace<A
 
         int seed;
         int maxEpochStep;
+        int maxEpoch;
         int maxStep;
         int expRepMaxSize;
         int batchSize;

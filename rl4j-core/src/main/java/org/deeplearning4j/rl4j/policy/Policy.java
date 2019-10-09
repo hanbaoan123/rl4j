@@ -16,6 +16,8 @@
 
 package org.deeplearning4j.rl4j.policy;
 
+import java.util.List;
+
 import org.deeplearning4j.gym.StepReply;
 import org.deeplearning4j.rl4j.learning.HistoryProcessor;
 import org.deeplearning4j.rl4j.learning.IHistoryProcessor;
@@ -113,5 +115,8 @@ public abstract class Policy<O extends Encodable, A> implements IPolicy<O, A> {
 
         return reward;
     }
-
+    public A nextAction(INDArray input, List<Integer> actionsAtState) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
