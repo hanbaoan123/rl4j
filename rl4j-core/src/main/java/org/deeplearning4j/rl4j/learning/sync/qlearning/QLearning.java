@@ -122,7 +122,7 @@ public abstract class QLearning<O extends Encodable, A, AS extends ActionSpace<A
         meanQ /= (numQ + 0.001); //avoid div zero
 
 
-        StatEntry statEntry = new QLStatEntry(getStepCounter(), getEpochCounter(), reward, step, scores,
+        StatEntry statEntry = new QLStatEntry(getStepCounter(), getEpochCounter(), reward, reward, scores,
                         getEgPolicy().getEpsilon(), startQ, meanQ);
 
         return statEntry;
@@ -136,7 +136,7 @@ public abstract class QLearning<O extends Encodable, A, AS extends ActionSpace<A
         int stepCounter;
         int epochCounter;
         double reward;
-        int episodeLength;
+        double episodeLength;
         List<Double> scores;
         float epsilon;
         double startQ;

@@ -62,4 +62,10 @@ public class MockAsyncConfiguration implements AsyncConfiguration {
     public double getErrorClamp() {
         return 0;
     }
+
+	@Override
+	public int getMaxEpoch() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }

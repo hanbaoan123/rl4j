@@ -159,7 +159,7 @@ public abstract class QLearningDiscreteInstance<O extends Encodable> extends QLe
 			int maxAction = Learning.getMaxAction(qs);
 
 			maxQ = qs.getDouble(maxAction);
-			action = getEgInstancePolicy().nextAction(hstack);
+			action = getEgPolicy().nextAction(hstack);
 		}
 
 		lastAction = action;

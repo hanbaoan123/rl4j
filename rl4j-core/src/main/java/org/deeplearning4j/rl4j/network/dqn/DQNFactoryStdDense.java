@@ -41,56 +41,50 @@ import org.nd4j.linalg.lossfunctions.LossFunctions;
 @Value
 public class DQNFactoryStdDense implements DQNFactory {
 
+	Configuration conf;
 
-    Configuration conf;
+	public DQN buildDQN(int[] numInputs, int numOutputs) {
+		int nIn = 1;
+		for (int i : numInputs) {
+			nIn *= i;
+		}
+		NeuralNetConfiguration.ListBuilder confB = new NeuralNetConfiguration.Builder().seed(Constants.NEURAL_NET_SEED)
+				.optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+				// .updater(Updater.NESTEROVS).momentum(0.9)
+				// .updater(Updater.RMSPROP).rho(conf.getRmsDecay())//.rmsDecay(conf.getRmsDecay())
+				.updater(conf.getUpdater() != null ? conf.getUpdater() : new Adam()).weightInit(WeightInit.XAVIER)
+				.l2(conf.getL2()).list().layer(0, new DenseLayer.Builder().nIn(nIn).nOut(conf.getNumHiddenNodes())
+						.activation(Activation.RELU).build());
 
-    public DQN buildDQN(int[] numInputs, int numOutputs) {
-        int nIn = 1;
-        for (int i : numInputs) {
-            nIn *= i;
-        }
-        NeuralNetConfiguration.ListBuilder confB = new NeuralNetConfiguration.Builder().seed(Constants.NEURAL_NET_SEED)
-                        .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
-                        //.updater(Updater.NESTEROVS).momentum(0.9)
-                        //.updater(Updater.RMSPROP).rho(conf.getRmsDecay())//.rmsDecay(conf.getRmsDecay())
-                        .updater(conf.getUpdater() != null ? conf.getUpdater() : new Adam())
-                        .weightInit(WeightInit.XAVIER)
-                        .l2(conf.getL2())
-                        .list().layer(0, new DenseLayer.Builder().nIn(nIn).nOut(conf.getNumHiddenNodes())
-                                        .activation(Activation.RELU).build());
+		for (int i = 1; i < conf.getNumLayer(); i++) {
+			confB.layer(i, new DenseLayer.Builder().nIn(conf.getNumHiddenNodes()).nOut(conf.getNumHiddenNodes())
+					.activation(Activation.RELU).build());
+		}
 
+		confB.layer(conf.getNumLayer(), new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+				.activation(Activation.IDENTITY).nIn(conf.getNumHiddenNodes()).nOut(numOutputs).build());
 
-        for (int i = 1; i < conf.getNumLayer(); i++) {
-            confB.layer(i, new DenseLayer.Builder().nIn(conf.getNumHiddenNodes()).nOut(conf.getNumHiddenNodes())
-                            .activation(Activation.RELU).build());
-        }
+		MultiLayerConfiguration mlnconf = confB.build();
+		MultiLayerNetwork model = new MultiLayerNetwork(mlnconf);
+		model.init();
+		if (conf.getListeners() != null) {
+			model.setListeners(conf.getListeners());
+		} else {
+			model.setListeners(new ScoreIterationListener(Constants.NEURAL_NET_ITERATION_LISTENER));
+		}
+		return new DQN(model);
+	}
 
-        confB.layer(conf.getNumLayer(), new OutputLayer.Builder(LossFunctions.LossFunction.MSE).activation(Activation.IDENTITY)
-                        .nIn(conf.getNumHiddenNodes()).nOut(numOutputs).build());
+	@AllArgsConstructor
+	@Value
+	@Builder
+	public static class Configuration {
 
-
-        MultiLayerConfiguration mlnconf = confB.build();
-        MultiLayerNetwork model = new MultiLayerNetwork(mlnconf);
-        model.init();
-        if (conf.getListeners() != null) {
-            model.setListeners(conf.getListeners());
-        } else {
-            model.setListeners(new ScoreIterationListener(Constants.NEURAL_NET_ITERATION_LISTENER));
-        }
-        return new DQN(model);
-    }
-
-    @AllArgsConstructor
-    @Value
-    @Builder
-    public static class Configuration {
-
-        int numLayer;
-        int numHiddenNodes;
-        double l2;
-        IUpdater updater;
-        TrainingListener[] listeners;
-    }
-
+		int numLayer;
+		int numHiddenNodes;
+		double l2;
+		IUpdater updater;
+		TrainingListener[] listeners;
+	}
 
 }

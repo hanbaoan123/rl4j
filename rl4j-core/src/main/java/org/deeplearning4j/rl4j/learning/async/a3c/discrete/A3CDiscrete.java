@@ -85,5 +85,11 @@ public abstract class A3CDiscrete<O extends Encodable> extends AsyncLearning<O, 
             return -1;
         }
 
+		@Override
+		public int getMaxEpoch() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
     }
 }

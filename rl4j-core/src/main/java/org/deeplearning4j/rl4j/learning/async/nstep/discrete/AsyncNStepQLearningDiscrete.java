@@ -82,6 +82,11 @@ public abstract class AsyncNStepQLearningDiscrete<O extends Encodable>
         double errorClamp;
         float minEpsilon;
         int epsilonNbStep;
+		@Override
+		public int getMaxEpoch() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
 
     }
 }
