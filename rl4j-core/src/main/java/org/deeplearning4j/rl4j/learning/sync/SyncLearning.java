@@ -105,7 +105,7 @@ public abstract class SyncLearning<O extends Encodable, A, AS extends ActionSpac
 
 		boolean canContinue = listeners.notifyTrainingStarted();
 		if (canContinue) {
-			while (getEpochCounter() <= getConfiguration().getMaxEpoch()) {
+			while (getEpochCounter() < getConfiguration().getMaxEpoch()) {
 				preEpoch();
 				canContinue = listeners.notifyNewEpoch(this);
 				if (!canContinue) {
@@ -113,11 +113,12 @@ public abstract class SyncLearning<O extends Encodable, A, AS extends ActionSpac
 				}
 
 				IDataManager.StatEntry statEntry = trainEpoch();
-				canContinue = listeners.notifyEpochTrainingResult(this, statEntry);
-				if (!canContinue) {
-					break;
+				if ((getEpochCounter() + 1) % 10 == 0) {
+					canContinue = listeners.notifyEpochTrainingResult(this, statEntry);
+					if (!canContinue) {
+						break;
+					}
 				}
-
 				postEpoch();
 
 				if (getEpochCounter() % progressMonitorFrequency == 0) {

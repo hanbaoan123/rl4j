@@ -50,6 +50,12 @@ public class DQNPolicyInstance<O extends Encodable> extends Policy<O, Integer> {
 		return Learning.getMaxAction(output);
 	}
 
+	public Integer nextActionPrint(INDArray input) {
+		INDArray output = dqn.output(input);
+		System.out.println(output);
+		return Learning.getMaxAction(output);
+	}
+
 	/**
 	 * 带有可选行为集合的贪婪行为
 	 */
@@ -131,7 +137,7 @@ public class DQNPolicyInstance<O extends Encodable> extends Policy<O, Integer> {
 						hstack = hstack.reshape(Learning.makeShape(1, ArrayUtil.toInts(hstack.shape())));
 				}
 				if (DeepQLParameters.actionSelection == 0) {
-					action = nextAction(hstack);
+					action = nextActionPrint(hstack);
 				} else {
 					// 选择工序
 					if (mdp instanceof ScheduleEnv) {
@@ -164,6 +170,7 @@ public class DQNPolicyInstance<O extends Encodable> extends Policy<O, Integer> {
 			history = isHistoryProcessor ? hp.getHistory()
 					: new INDArray[] { Learning.getInput(mdp, stepReply.getObservation()) };
 			step++;
+
 		}
 		return reward;
 	}
