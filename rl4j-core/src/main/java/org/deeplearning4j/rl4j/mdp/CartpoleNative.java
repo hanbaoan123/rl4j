@@ -37,123 +37,134 @@ import java.util.Random;
  */
 
 public class CartpoleNative implements MDP<CartpoleNative.State, Integer, DiscreteSpace> {
-    public enum KinematicsIntegrators { Euler, SemiImplicitEuler };
+	public enum KinematicsIntegrators {
+		Euler, SemiImplicitEuler
+	};
 
-    private static final int NUM_ACTIONS = 2;
-    private static final int ACTION_LEFT = 0;
-    private static final int ACTION_RIGHT = 1;
-    private static final int OBSERVATION_NUM_FEATURES = 4;
+	private static final int NUM_ACTIONS = 2;
+	private static final int ACTION_LEFT = 0;
+	private static final int ACTION_RIGHT = 1;
+	private static final int OBSERVATION_NUM_FEATURES = 4;
 
-    private static final double gravity = 9.8;
-    private static final double massCart = 1.0;
-    private static final double massPole = 0.1;
-    private static final double totalMass = massPole + massCart;
-    private static final double length = 0.5; // actually half the pole's length
-    private static final double polemassLength = massPole * length;
-    private static final double forceMag = 10.0;
-    private static final double tau = 0.02;  // seconds between state updates
+	private static final double gravity = 9.8;
+	private static final double massCart = 1.0;
+	private static final double massPole = 0.1;
+	private static final double totalMass = massPole + massCart;
+	private static final double length = 0.5; // actually half the pole's length
+	private static final double polemassLength = massPole * length;
+	private static final double forceMag = 10.0;
+	private static final double tau = 0.02; // seconds between state updates
 
-    // Angle at which to fail the episode
-    private static final double thetaThresholdRadians = 12.0 * 2.0 * Math.PI / 360.0;
-    private static final double xThreshold = 2.4;
+	// Angle at which to fail the episode
+	private static final double thetaThresholdRadians = 12.0 * 2.0 * Math.PI / 360.0;
+	private static final double xThreshold = 2.4;
 
-    private final Random rnd = new Random();
+	private final Random rnd;
 
-    @Getter @Setter
-    private KinematicsIntegrators kinematicsIntegrator = KinematicsIntegrators.Euler;
+	@Getter
+	@Setter
+	private KinematicsIntegrators kinematicsIntegrator = KinematicsIntegrators.Euler;
 
-    @Getter
-    private boolean done = false;
+	@Getter
+	private boolean done = false;
 
-    private double x;
-    private double xDot;
-    private double theta;
-    private double thetaDot;
-    private Integer stepsBeyondDone;
+	private double x;
+	private double xDot;
+	private double theta;
+	private double thetaDot;
+	private Integer stepsBeyondDone;
 
-    @Getter
-    private DiscreteSpace actionSpace = new DiscreteSpace(NUM_ACTIONS);
-    @Getter
-    private ObservationSpace<CartpoleNative.State> observationSpace = new ArrayObservationSpace(new int[] { OBSERVATION_NUM_FEATURES });
+	@Getter
+	private DiscreteSpace actionSpace = new DiscreteSpace(NUM_ACTIONS);
+	@Getter
+	private ObservationSpace<CartpoleNative.State> observationSpace = new ArrayObservationSpace(
+			new int[] { OBSERVATION_NUM_FEATURES });
 
-    @Override
-    public State reset() {
+	public CartpoleNative() {
+		rnd = new Random();
+	}
 
-        x = 0.1 * rnd.nextDouble() - 0.05;
-        xDot = 0.1 * rnd.nextDouble() - 0.05;
-        theta = 0.1 * rnd.nextDouble() - 0.05;
-        thetaDot = 0.1 * rnd.nextDouble() - 0.05;
-        stepsBeyondDone = null;
+	public CartpoleNative(int seed) {
+		rnd = new Random(seed);
+	}
 
-        return new State(new double[] { x, xDot, theta, thetaDot });
-    }
+	@Override
+	public State reset() {
 
-    @Override
-    public void close() {
+		x = 0.1 * rnd.nextDouble() - 0.05;
+		xDot = 0.1 * rnd.nextDouble() - 0.05;
+		theta = 0.1 * rnd.nextDouble() - 0.05;
+		thetaDot = 0.1 * rnd.nextDouble() - 0.05;
+		stepsBeyondDone = null;
 
-    }
+		return new State(new double[] { x, xDot, theta, thetaDot });
+	}
 
-    @Override
-    public StepReply<State> step(Integer action) {
-        double force = action == ACTION_RIGHT ? forceMag : -forceMag;
-        double cosTheta = Math.cos(theta);
-        double sinTheta = Math.sin(theta);
-        double temp = (force + polemassLength * thetaDot * thetaDot * sinTheta) / totalMass;
-        double thetaAcc = (gravity * sinTheta - cosTheta* temp) / (length * (4.0/3.0 - massPole * cosTheta * cosTheta / totalMass));
-        double xAcc = temp - polemassLength * thetaAcc * cosTheta / totalMass;
+	@Override
+	public void close() {
 
-        switch(kinematicsIntegrator) {
-            case Euler:
-                x += tau * xDot;
-                xDot += tau * xAcc;
-                theta += tau * thetaDot;
-                thetaDot += tau * thetaAcc;
-                break;
+	}
 
-            case SemiImplicitEuler:
-                xDot += tau * xAcc;
-                x += tau * xDot;
-                thetaDot += tau * thetaAcc;
-                theta += tau * thetaDot;
-                break;
-        }
+	@Override
+	public StepReply<State> step(Integer action) {
+		double force = action == ACTION_RIGHT ? forceMag : -forceMag;
+		double cosTheta = Math.cos(theta);
+		double sinTheta = Math.sin(theta);
+		double temp = (force + polemassLength * thetaDot * thetaDot * sinTheta) / totalMass;
+		double thetaAcc = (gravity * sinTheta - cosTheta * temp)
+				/ (length * (4.0 / 3.0 - massPole * cosTheta * cosTheta / totalMass));
+		double xAcc = temp - polemassLength * thetaAcc * cosTheta / totalMass;
 
-        boolean done =  x < -xThreshold || x > xThreshold
-                || theta < -thetaThresholdRadians || theta > thetaThresholdRadians;
+		switch (kinematicsIntegrator) {
+		case Euler:
+			x += tau * xDot;
+			xDot += tau * xAcc;
+			theta += tau * thetaDot;
+			thetaDot += tau * thetaAcc;
+			break;
 
-        double reward;
-        if(!done) {
-            reward = 1.0;
-        }
-        else if(stepsBeyondDone == null) {
-            stepsBeyondDone = 0;
-            reward = 1.0;
-        }
-        else {
-            ++stepsBeyondDone;
-            reward = 0;
-        }
+		case SemiImplicitEuler:
+			xDot += tau * xAcc;
+			x += tau * xDot;
+			thetaDot += tau * thetaAcc;
+			theta += tau * thetaDot;
+			break;
+		}
 
-        return new StepReply<>(new State(new double[] { x, xDot, theta, thetaDot }), reward, done, null);
-    }
+		boolean done = x < -xThreshold || x > xThreshold || theta < -thetaThresholdRadians
+				|| theta > thetaThresholdRadians;
 
-    @Override
-    public MDP<State, Integer, DiscreteSpace> newInstance() {
-        return new CartpoleNative();
-    }
+		double reward;
+		if (!done) {
+			reward = 1.0;
+		} else if (stepsBeyondDone == null) {
+			stepsBeyondDone = 0;
+			reward = 1.0;
+		} else {
+			++stepsBeyondDone;
+			reward = 0;
+		}
 
-    public static class State  implements Encodable {
+		return new StepReply<>(new State(new double[] { x, xDot, theta, thetaDot }), reward, done, null);
+	}
 
-        private final double[] state;
+	@Override
+	public MDP<State, Integer, DiscreteSpace> newInstance() {
+		return new CartpoleNative();
+	}
 
-        State(double[] state) {
+	public static class State implements Encodable {
 
-            this.state = state;
-        }
+		private final double[] state;
 
-        @Override
-        public double[] toArray() {
-            return state;
-        }
-    }
+		State(double[] state) {
+
+			this.state = state;
+		}
+
+		@Override
+		public double[] toArray() {
+			return state;
+		}
+	}
 }

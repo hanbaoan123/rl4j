@@ -23,6 +23,7 @@ import org.deeplearning4j.gym.StepReply;
 import org.deeplearning4j.rl4j.learning.Learning;
 import org.deeplearning4j.rl4j.learning.sync.Transition;
 import org.deeplearning4j.rl4j.learning.sync.qlearning.QLearning;
+import org.deeplearning4j.rl4j.learning.sync.qlearning.QLearning.QLConfiguration;
 import org.deeplearning4j.rl4j.learning.sync.qlearning.discrete.TDTargetAlgorithm.*;
 import org.deeplearning4j.rl4j.mdp.MDP;
 import org.deeplearning4j.rl4j.network.dqn.IDQN;
@@ -34,7 +35,9 @@ import org.deeplearning4j.rl4j.policy.EpsGreedySchedule;
 import org.deeplearning4j.rl4j.space.DiscreteSpace;
 import org.deeplearning4j.rl4j.space.Encodable;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.dataset.api.DataSet;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.util.ArrayUtil;
 
 import java.util.ArrayList;
@@ -80,6 +83,11 @@ public abstract class QLearningDiscreteSchedule<O extends Encodable> extends QLe
 
 	public QLearningDiscreteSchedule(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn, QLConfiguration conf,
 			int epsilonNbStep) {
+		this(mdp, dqn, conf, epsilonNbStep, Nd4j.getRandomFactory().getNewRandomInstance(conf.getSeed()));
+	}
+
+	public QLearningDiscreteSchedule(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn, QLConfiguration conf,
+			int epsilonNbStep, Random random) {
 		super(conf);
 		this.configuration = conf;
 		this.mdp = mdp;
@@ -87,10 +95,9 @@ public abstract class QLearningDiscreteSchedule<O extends Encodable> extends QLe
 		targetQNetwork = dqn.clone();
 		policy = new DQNPolicySchedule(getQNetwork());
 		// 使用调度贪婪策略
-		egSchedulePolicy = new EpsGreedySchedule(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(),
+		egSchedulePolicy = new EpsGreedySchedule(policy, mdp, conf.getUpdateStart(), epsilonNbStep, random,
 				conf.getMinEpsilon(), this);
-		egPolicy = new EpsGreedy(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(), conf.getMinEpsilon(),
-				this);
+		egPolicy = new EpsGreedy(policy, mdp, conf.getUpdateStart(), epsilonNbStep, random, conf.getMinEpsilon(), this);
 		mdp.getActionSpace().setSeed(conf.getSeed());
 
 		tdTargetAlgorithm = conf.isDoubleDQN() ? new DoubleDQN(this, conf.getGamma(), conf.getErrorClamp())

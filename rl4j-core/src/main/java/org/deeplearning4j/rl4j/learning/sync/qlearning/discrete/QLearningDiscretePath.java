@@ -27,6 +27,7 @@ import org.deeplearning4j.gym.StepReply;
 import org.deeplearning4j.rl4j.learning.Learning;
 import org.deeplearning4j.rl4j.learning.sync.Transition;
 import org.deeplearning4j.rl4j.learning.sync.qlearning.QLearning;
+import org.deeplearning4j.rl4j.learning.sync.qlearning.QLearning.QLConfiguration;
 import org.deeplearning4j.rl4j.learning.sync.qlearning.discrete.TDTargetAlgorithm.*;
 import org.deeplearning4j.rl4j.mdp.MDP;
 import org.deeplearning4j.rl4j.network.dqn.IDQN;
@@ -39,7 +40,9 @@ import org.deeplearning4j.rl4j.policy.EpsGreedySchedule;
 import org.deeplearning4j.rl4j.space.DiscreteSpace;
 import org.deeplearning4j.rl4j.space.Encodable;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.dataset.api.DataSet;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.util.ArrayUtil;
 
 import java.util.ArrayList;
@@ -83,6 +86,11 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 
 	public QLearningDiscretePath(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn, QLConfiguration conf,
 			int epsilonNbStep) {
+		this(mdp, dqn, conf, epsilonNbStep, Nd4j.getRandomFactory().getNewRandomInstance(conf.getSeed()));
+	}
+
+	public QLearningDiscretePath(MDP<O, Integer, DiscreteSpace> mdp, IDQN dqn, QLConfiguration conf, int epsilonNbStep,
+			Random random) {
 		super(conf);
 		this.configuration = conf;
 		this.mdp = mdp;
@@ -90,10 +98,9 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 		targetQNetwork = dqn.clone();
 		policy = new DQNPolicyPath(getQNetwork());
 		// 使用调度贪婪策略
-		egPathPolicy = new EpsGreedyPath(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(),
+		egPathPolicy = new EpsGreedyPath(policy, mdp, conf.getUpdateStart(), epsilonNbStep, random,
 				conf.getMinEpsilon(), this);
-		egPolicy = new EpsGreedy(policy, mdp, conf.getUpdateStart(), epsilonNbStep, getRandom(), conf.getMinEpsilon(),
-				this);
+		egPolicy = new EpsGreedy(policy, mdp, conf.getUpdateStart(), epsilonNbStep, random, conf.getMinEpsilon(), this);
 		mdp.getActionSpace().setSeed(conf.getSeed());
 
 		tdTargetAlgorithm = conf.isDoubleDQN() ? new DoubleDQN(this, conf.getGamma(), conf.getErrorClamp())
@@ -178,7 +185,7 @@ public abstract class QLearningDiscretePath<O extends Encodable> extends QLearni
 			int maxAction = Learning.getMaxAction(qs);
 
 			maxQ = qs.getDouble(maxAction);
-			
+
 		}
 
 		lastAction = action;

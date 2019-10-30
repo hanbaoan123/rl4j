@@ -32,88 +32,91 @@ import org.deeplearning4j.rl4j.space.Encodable;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.indexing.NDArrayIndex;
-
-import java.util.Random;
+import org.nd4j.linalg.api.rng.Random;
 import java.util.Stack;
 
 /**
  * @author rubenfiszel (ruben.fiszel@epfl.ch) 7/23/16.
  *
- * Local thread as described in the https://arxiv.org/abs/1602.01783 paper.
+ *         Local thread as described in the https://arxiv.org/abs/1602.01783
+ *         paper.
  */
 public class A3CThreadDiscrete<O extends Encodable> extends AsyncThreadDiscrete<O, IActorCritic> {
 
-    @Getter
-    final protected A3CDiscrete.A3CConfiguration conf;
-    @Getter
-    final protected AsyncGlobal<IActorCritic> asyncGlobal;
-    @Getter
-    final protected int threadNumber;
+	@Getter
+	final protected A3CDiscrete.A3CConfiguration conf;
+	@Getter
+	final protected AsyncGlobal<IActorCritic> asyncGlobal;
+	@Getter
+	final protected int threadNumber;
 
-    final private Random random;
+	final private Random rnd;
 
-    public A3CThreadDiscrete(MDP<O, Integer, DiscreteSpace> mdp, AsyncGlobal<IActorCritic> asyncGlobal,
-                             A3CDiscrete.A3CConfiguration a3cc, int deviceNum, TrainingListenerList listeners,
-                             int threadNumber) {
-        super(asyncGlobal, mdp, listeners, threadNumber, deviceNum);
-        this.conf = a3cc;
-        this.asyncGlobal = asyncGlobal;
-        this.threadNumber = threadNumber;
-        mdp.getActionSpace().setSeed(conf.getSeed() + threadNumber);
-        random = new Random(conf.getSeed() + threadNumber);
-    }
+	public A3CThreadDiscrete(MDP<O, Integer, DiscreteSpace> mdp, AsyncGlobal<IActorCritic> asyncGlobal,
+			A3CDiscrete.A3CConfiguration a3cc, int deviceNum, TrainingListenerList listeners, int threadNumber) {
+		super(asyncGlobal, mdp, listeners, threadNumber, deviceNum);
+		this.conf = a3cc;
+		this.asyncGlobal = asyncGlobal;
+		this.threadNumber = threadNumber;
 
-    @Override
-    protected Policy<O, Integer> getPolicy(IActorCritic net) {
-        return new ACPolicy(net, random);
-    }
+		Integer seed = conf.getSeed();
+		rnd = Nd4j.getRandom();
+		if (seed != null) {
+			mdp.getActionSpace().setSeed(seed + threadNumber);
+			rnd.setSeed(seed);
+		}
+	}
 
-    /**
-     *  calc the gradients based on the n-step rewards
-     */
-    @Override
-    public Gradient[] calcGradient(IActorCritic iac, Stack<MiniTrans<Integer>> rewards) {
-        MiniTrans<Integer> minTrans = rewards.pop();
+	@Override
+	protected Policy<O, Integer> getPolicy(IActorCritic net) {
+		return new ACPolicy(net, rnd);
+	}
 
-        int size = rewards.size();
+	/**
+	 * calc the gradients based on the n-step rewards
+	 */
+	@Override
+	public Gradient[] calcGradient(IActorCritic iac, Stack<MiniTrans<Integer>> rewards) {
+		MiniTrans<Integer> minTrans = rewards.pop();
 
-        //if recurrent then train as a time serie with a batch size of 1
-        boolean recurrent = getAsyncGlobal().getCurrent().isRecurrent();
+		int size = rewards.size();
 
-        int[] shape = getHistoryProcessor() == null ? getMdp().getObservationSpace().getShape()
-                        : getHistoryProcessor().getConf().getShape();
-        int[] nshape = recurrent ? Learning.makeShape(1, shape, size)
-                        : Learning.makeShape(size, shape);
+		// if recurrent then train as a time serie with a batch size of 1
+		boolean recurrent = getAsyncGlobal().getCurrent().isRecurrent();
 
-        INDArray input = Nd4j.create(nshape);
-        INDArray targets = recurrent ? Nd4j.create(1, 1, size) : Nd4j.create(size, 1);
-        INDArray logSoftmax = recurrent ? Nd4j.zeros(1, getMdp().getActionSpace().getSize(), size)
-                        : Nd4j.zeros(size, getMdp().getActionSpace().getSize());
+		int[] shape = getHistoryProcessor() == null ? getMdp().getObservationSpace().getShape()
+				: getHistoryProcessor().getConf().getShape();
+		int[] nshape = recurrent ? Learning.makeShape(1, shape, size) : Learning.makeShape(size, shape);
 
-        double r = minTrans.getReward();
-        for (int i = size - 1; i >= 0; i--) {
-            minTrans = rewards.pop();
+		INDArray input = Nd4j.create(nshape);
+		INDArray targets = recurrent ? Nd4j.create(1, 1, size) : Nd4j.create(size, 1);
+		INDArray logSoftmax = recurrent ? Nd4j.zeros(1, getMdp().getActionSpace().getSize(), size)
+				: Nd4j.zeros(size, getMdp().getActionSpace().getSize());
 
-            r = minTrans.getReward() + conf.getGamma() * r;
-            if (recurrent) {
-                input.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(i)).assign(minTrans.getObs());
-            } else {
-                input.putRow(i, minTrans.getObs());
-            }
+		double r = minTrans.getReward();
+		for (int i = size - 1; i >= 0; i--) {
+			minTrans = rewards.pop();
 
-            //the critic
-            targets.putScalar(i, r);
+			r = minTrans.getReward() + conf.getGamma() * r;
+			if (recurrent) {
+				input.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(i)).assign(minTrans.getObs());
+			} else {
+				input.putRow(i, minTrans.getObs());
+			}
 
-            //the actor
-            double expectedV = minTrans.getOutput()[0].getDouble(0);
-            double advantage = r - expectedV;
-            if (recurrent) {
-                logSoftmax.putScalar(0, minTrans.getAction(), i, advantage);
-            } else {
-                logSoftmax.putScalar(i, minTrans.getAction(), advantage);
-            }
-        }
+			// the critic
+			targets.putScalar(i, r);
 
-        return iac.gradient(input, new INDArray[] {targets, logSoftmax});
-    }
+			// the actor
+			double expectedV = minTrans.getOutput()[0].getDouble(0);
+			double advantage = r - expectedV;
+			if (recurrent) {
+				logSoftmax.putScalar(0, minTrans.getAction(), i, advantage);
+			} else {
+				logSoftmax.putScalar(i, minTrans.getAction(), advantage);
+			}
+		}
+
+		return iac.gradient(input, new INDArray[] { targets, logSoftmax });
+	}
 }

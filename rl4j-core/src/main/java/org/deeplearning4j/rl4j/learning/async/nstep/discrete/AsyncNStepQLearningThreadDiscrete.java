@@ -33,7 +33,7 @@ import org.deeplearning4j.rl4j.space.Encodable;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.factory.Nd4j;
 
-import java.util.Random;
+import org.nd4j.linalg.api.rng.Random;
 import java.util.Stack;
 
 /**
@@ -41,57 +41,60 @@ import java.util.Stack;
  */
 public class AsyncNStepQLearningThreadDiscrete<O extends Encodable> extends AsyncThreadDiscrete<O, IDQN> {
 
-    @Getter
-    final protected AsyncNStepQLearningDiscrete.AsyncNStepQLConfiguration conf;
-    @Getter
-    final protected IAsyncGlobal<IDQN> asyncGlobal;
-    @Getter
-    final protected int threadNumber;
+	@Getter
+	final protected AsyncNStepQLearningDiscrete.AsyncNStepQLConfiguration conf;
+	@Getter
+	final protected IAsyncGlobal<IDQN> asyncGlobal;
+	@Getter
+	final protected int threadNumber;
 
-    final private Random random;
+	final private Random rnd;
 
-    public AsyncNStepQLearningThreadDiscrete(MDP<O, Integer, DiscreteSpace> mdp, IAsyncGlobal<IDQN> asyncGlobal,
-                                             AsyncNStepQLearningDiscrete.AsyncNStepQLConfiguration conf,
-                                             TrainingListenerList listeners, int threadNumber, int deviceNum) {
-        super(asyncGlobal, mdp, listeners, threadNumber, deviceNum);
-        this.conf = conf;
-        this.asyncGlobal = asyncGlobal;
-        this.threadNumber = threadNumber;
-        mdp.getActionSpace().setSeed(conf.getSeed() + threadNumber);
-        random = new Random(conf.getSeed() + threadNumber);
-    }
+	public AsyncNStepQLearningThreadDiscrete(MDP<O, Integer, DiscreteSpace> mdp, IAsyncGlobal<IDQN> asyncGlobal,
+			AsyncNStepQLearningDiscrete.AsyncNStepQLConfiguration conf, TrainingListenerList listeners,
+			int threadNumber, int deviceNum) {
+		super(asyncGlobal, mdp, listeners, threadNumber, deviceNum);
+		this.conf = conf;
+		this.asyncGlobal = asyncGlobal;
+		this.threadNumber = threadNumber;
+		rnd = Nd4j.getRandom();
 
-    public Policy<O, Integer> getPolicy(IDQN nn) {
-        return new EpsGreedy(new DQNPolicy(nn), getMdp(), conf.getUpdateStart(), conf.getEpsilonNbStep(),
-                        random, conf.getMinEpsilon(), this);
-    }
+		Integer seed = conf.getSeed();
+		if (seed != null) {
+			mdp.getActionSpace().setSeed(seed + threadNumber);
+			rnd.setSeed(seed + threadNumber);
+		}
+	}
 
+	public Policy<O, Integer> getPolicy(IDQN nn) {
+		return new EpsGreedy(new DQNPolicy(nn), getMdp(), conf.getUpdateStart(), conf.getEpsilonNbStep(), rnd,
+				conf.getMinEpsilon(), this);
+	}
 
+	// calc the gradient based on the n-step rewards
+	public Gradient[] calcGradient(IDQN current, Stack<MiniTrans<Integer>> rewards) {
 
-    //calc the gradient based on the n-step rewards
-    public Gradient[] calcGradient(IDQN current, Stack<MiniTrans<Integer>> rewards) {
+		MiniTrans<Integer> minTrans = rewards.pop();
 
-        MiniTrans<Integer> minTrans = rewards.pop();
+		int size = rewards.size();
 
-        int size = rewards.size();
+		int[] shape = getHistoryProcessor() == null ? getMdp().getObservationSpace().getShape()
+				: getHistoryProcessor().getConf().getShape();
+		int[] nshape = Learning.makeShape(size, shape);
+		INDArray input = Nd4j.create(nshape);
+		INDArray targets = Nd4j.create(size, getMdp().getActionSpace().getSize());
 
-        int[] shape = getHistoryProcessor() == null ? getMdp().getObservationSpace().getShape()
-                        : getHistoryProcessor().getConf().getShape();
-        int[] nshape = Learning.makeShape(size, shape);
-        INDArray input = Nd4j.create(nshape);
-        INDArray targets = Nd4j.create(size, getMdp().getActionSpace().getSize());
+		double r = minTrans.getReward();
+		for (int i = size - 1; i >= 0; i--) {
+			minTrans = rewards.pop();
 
-        double r = minTrans.getReward();
-        for (int i = size - 1; i >= 0; i--) {
-            minTrans = rewards.pop();
+			r = minTrans.getReward() + conf.getGamma() * r;
+			input.putRow(i, minTrans.getObs());
+			INDArray row = minTrans.getOutput()[0];
+			row = row.putScalar(minTrans.getAction(), r);
+			targets.putRow(i, row);
+		}
 
-            r = minTrans.getReward() + conf.getGamma() * r;
-            input.putRow(i, minTrans.getObs());
-            INDArray row = minTrans.getOutput()[0];
-            row = row.putScalar(minTrans.getAction(), r);
-            targets.putRow(i, row);
-        }
-
-        return current.gradient(input, targets);
-    }
+		return current.gradient(input, targets);
+	}
 }

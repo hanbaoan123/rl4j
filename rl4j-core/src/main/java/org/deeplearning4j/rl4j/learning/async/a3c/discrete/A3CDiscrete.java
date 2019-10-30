@@ -26,64 +26,74 @@ import org.deeplearning4j.rl4j.network.ac.IActorCritic;
 import org.deeplearning4j.rl4j.policy.ACPolicy;
 import org.deeplearning4j.rl4j.space.DiscreteSpace;
 import org.deeplearning4j.rl4j.space.Encodable;
+import org.nd4j.linalg.api.rng.Random;
+import org.nd4j.linalg.factory.Nd4j;
 
 /**
- * @author rubenfiszel (ruben.fiszel@epfl.ch) 7/23/16.
- * Training for A3C in the Discrete Domain
+ * @author rubenfiszel (ruben.fiszel@epfl.ch) 7/23/16. Training for A3C in the
+ *         Discrete Domain
  *
- * All methods are fully implemented as described in the
- * https://arxiv.org/abs/1602.01783 paper.
+ *         All methods are fully implemented as described in the
+ *         https://arxiv.org/abs/1602.01783 paper.
  *
  */
 public abstract class A3CDiscrete<O extends Encodable> extends AsyncLearning<O, Integer, DiscreteSpace, IActorCritic> {
 
-    @Getter
-    final public A3CConfiguration configuration;
-    @Getter
-    final protected MDP<O, Integer, DiscreteSpace> mdp;
-    final private IActorCritic iActorCritic;
-    @Getter
-    final private AsyncGlobal asyncGlobal;
-    @Getter
-    final private ACPolicy<O> policy;
+	@Getter
+	final public A3CConfiguration configuration;
+	@Getter
+	final protected MDP<O, Integer, DiscreteSpace> mdp;
+	final private IActorCritic iActorCritic;
+	@Getter
+	final private AsyncGlobal asyncGlobal;
+	@Getter
+	final private ACPolicy<O> policy;
 
-    public A3CDiscrete(MDP<O, Integer, DiscreteSpace> mdp, IActorCritic iActorCritic, A3CConfiguration conf) {
-        super(conf);
-        this.iActorCritic = iActorCritic;
-        this.mdp = mdp;
-        this.configuration = conf;
-        policy = new ACPolicy<>(iActorCritic, getRandom());
-        asyncGlobal = new AsyncGlobal<>(iActorCritic, conf);
-        mdp.getActionSpace().setSeed(conf.getSeed());
-    }
+	public A3CDiscrete(MDP<O, Integer, DiscreteSpace> mdp, IActorCritic iActorCritic, A3CConfiguration conf) {
 
-    protected AsyncThread newThread(int i, int deviceNum) {
-        return new A3CThreadDiscrete(mdp.newInstance(), asyncGlobal, getConfiguration(), deviceNum, getListeners(), i);
-    }
+		this.iActorCritic = iActorCritic;
+		this.mdp = mdp;
+		this.configuration = conf;
 
-    public IActorCritic getNeuralNet() {
-        return iActorCritic;
-    }
+		asyncGlobal = new AsyncGlobal<>(iActorCritic, conf);
 
-    @Data
-    @AllArgsConstructor
-    @Builder
-    @EqualsAndHashCode(callSuper = false)
-    public static class A3CConfiguration implements AsyncConfiguration {
+		Integer seed = conf.getSeed();
+		Random rnd = Nd4j.getRandom();
+		if (seed != null) {
+			mdp.getActionSpace().setSeed(seed);
+			rnd.setSeed(seed);
+		}
 
-        int seed;
-        int maxEpochStep;
-        int maxStep;
-        int numThread;
-        int nstep;
-        int updateStart;
-        double rewardFactor;
-        double gamma;
-        double errorClamp;
+		policy = new ACPolicy<>(iActorCritic, rnd);
+	}
 
-        public int getTargetDqnUpdateFreq() {
-            return -1;
-        }
+	protected AsyncThread newThread(int i, int deviceNum) {
+		return new A3CThreadDiscrete(mdp.newInstance(), asyncGlobal, getConfiguration(), deviceNum, getListeners(), i);
+	}
+
+	public IActorCritic getNeuralNet() {
+		return iActorCritic;
+	}
+
+	@Data
+	@AllArgsConstructor
+	@Builder
+	@EqualsAndHashCode(callSuper = false)
+	public static class A3CConfiguration implements AsyncConfiguration {
+
+		Integer seed;
+		int maxEpochStep;
+		int maxStep;
+		int numThread;
+		int nstep;
+		int updateStart;
+		double rewardFactor;
+		double gamma;
+		double errorClamp;
+
+		public int getTargetDqnUpdateFreq() {
+			return -1;
+		}
 
 		@Override
 		public int getMaxEpoch() {
@@ -91,5 +101,5 @@ public abstract class A3CDiscrete<O extends Encodable> extends AsyncLearning<O, 
 			return 0;
 		}
 
-    }
+	}
 }

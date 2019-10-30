@@ -11,12 +11,12 @@ import org.deeplearning4j.rl4j.network.NeuralNet;
 import org.deeplearning4j.rl4j.space.ActionSpace;
 import org.deeplearning4j.rl4j.space.Encodable;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.Random;
 import org.nd4j.linalg.util.ArrayUtil;
 import com.mes.schedule.deepQL.env.ScheduleDiscreteActionSpace;
 import com.mes.schedule.deepQL.env.ScheduleEnv;
 
 import java.util.List;
-import java.util.Random;
 
 /**
  * @author rubenfiszel (ruben.fiszel@epfl.ch) 7/24/16.
@@ -37,7 +37,7 @@ public class EpsGreedyPath<O extends Encodable, A, AS extends ActionSpace<A>> ex
 	final private MDP<O, A, AS> mdp;
 	final private int updateStart;
 	final private int epsilonNbStep;
-	final private Random rd;
+	final private Random rnd;
 	final private float minEpsilon;
 	final private StepCountable learning;
 
@@ -53,7 +53,7 @@ public class EpsGreedyPath<O extends Encodable, A, AS extends ActionSpace<A>> ex
 		float ep = getEpsilon();
 		if (learning.getStepCounter() % 500 == 1)
 			log.info("EP: " + ep + " " + learning.getStepCounter());
-		if (rd.nextFloat() > ep)
+		if (rnd.nextFloat() > ep)
 			return policy.nextAction(input);
 		else
 			return mdp.getActionSpace().randomAction();
@@ -64,7 +64,7 @@ public class EpsGreedyPath<O extends Encodable, A, AS extends ActionSpace<A>> ex
 		float ep = getEpsilon();
 		if (learning.getStepCounter() % 500 == 1)
 			log.info("EP: " + ep + " " + learning.getStepCounter());
-		if (rd.nextFloat() > ep)
+		if (rnd.nextFloat() > ep)
 			return policy.nextAction(input);
 		else
 			return mdp.getActionSpace().randomAction();
@@ -85,7 +85,7 @@ public class EpsGreedyPath<O extends Encodable, A, AS extends ActionSpace<A>> ex
 		float ep = getEpsilon();
 		if (learning.getStepCounter() % 500 == 1)
 			log.info("EP: " + ep + " " + learning.getStepCounter());
-		if (rd.nextFloat() > ep)
+		if (rnd.nextFloat() > ep)
 			return policy.nextAction(input, actionsAtState);
 		else
 			return (A) ((PathDiscreteActionSpace) mdp.getActionSpace()).randomAction(actionsAtState);
